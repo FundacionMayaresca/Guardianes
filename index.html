@@ -3,10 +3,12 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>EducAR: Fauna Nativa</title>
+    <title>EducAR: Jaguar</title>
     
     <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
+    
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.2/dist/mindar-image-aframe.prod.js"></script>
+    
     <script src="https://cdn.jsdelivr.net/gh/c-frame/aframe-extras@7.0.0/dist/aframe-extras.min.js"></script>
 
     <style>
@@ -14,20 +16,19 @@
         
         #ui-container {
             position: absolute;
-            bottom: 20px;
+            bottom: 30px;
             width: 100%;
             display: flex;
             flex-direction: column;
             align-items: center;
             z-index: 10;
-            pointer-events: none; /* No bloquear la pantalla */
+            pointer-events: none;
         }
         
-        .btn-menu {
-            pointer-events: auto; /* Permitir clic */
+        #btn-jaguar {
+            pointer-events: auto;
             padding: 12px 24px;
-            margin: 5px;
-            background: #FF9800; /* Color naranja */
+            background: #E65100; /* Naranja fuerte */
             color: white;
             border: none;
             border-radius: 8px;
@@ -38,7 +39,7 @@
             transition: transform 0.1s;
         }
 
-        .btn-menu:active { transform: scale(0.95); }
+        #btn-jaguar:active { transform: scale(0.95); }
         
         #info-panel {
             background: rgba(255, 255, 255, 0.95);
@@ -61,114 +62,91 @@
 
     <div id="ui-container">
         <div id="info-panel">
-            <h3 id="titulo-especie">Especie</h3>
-            <p id="desc-especie">Descripción...</p>
+            <h3>Jaguar (Panthera onca)</h3>
+            <p>El felino más grande de América. Es un depredador clave que ayuda a mantener el equilibrio de los ecosistemas donde habita.</p>
         </div>
-        <div>
-            <button class="btn-menu" id="btn-jaguar">Ver Jaguar</button>
-        </div>
+        <button id="btn-jaguar">Ver Información</button>
     </div>
 
-    <a-scene mindar-image="imageTargetSrc: ./myrsc.mind;" 
+    <a-scene mindar-image="imageTargetSrc: ./myrsc.mind; autoStart: true;" 
              color-space="sRGB" 
              renderer="colorManagement: true, physicallyCorrectLights" 
              vr-mode-ui="enabled: false" 
              device-orientation-permission-ui="enabled: false">
         
         <a-assets>
-            <a-asset-item id="modelo-jaguar" src="./assets/jaguar.glb"></a-asset-item>
+            <a-asset-item id="modelo-jaguar" src="./jaguar.glb"></a-asset-item>
         </a-assets>
 
-        <a-light type="ambient" color="#ffffff" intensity="1.2"></a-light>
-        <a-light type="directional" color="#ffffff" intensity="0.6" position="1 2 1"></a-light>
+        <a-light type="ambient" color="#ffffff" intensity="1"></a-light>
+        <a-light type="directional" color="#ffffff" intensity="1.5" position="0 2 1"></a-light>
 
         <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
         <a-entity mindar-image-target="targetIndex: 0" id="marcador">
             
-            <a-entity id="contenedor-modelos" position="0 0 0">
-                
-                <a-gltf-model id="entidad-jaguar" 
-                              src="#modelo-jaguar" 
+            <a-entity id="contenedor-modelos">
+                <a-gltf-model src="#modelo-jaguar" 
                               position="0 0 0" 
                               scale="0.5 0.5 0.5" 
-                              rotation="90 0 0" 
-                              visible="false" 
+                              rotation="0 0 0" 
                               animation-mixer>
                 </a-gltf-model>
-                
-                </a-entity>
+            </a-entity>
+
         </a-entity>
     </a-scene>
 
     <script>
         document.addEventListener("DOMContentLoaded", () => {
             const btnJaguar = document.querySelector("#btn-jaguar");
-            const entidadJaguar = document.querySelector("#entidad-jaguar");
             const infoPanel = document.querySelector("#info-panel");
-            const tituloEspecie = document.querySelector("#titulo-especie");
-            const descEspecie = document.querySelector("#desc-especie");
-            
             const marcador = document.querySelector('#marcador');
             const contenedorModelos = document.querySelector('#contenedor-modelos');
             const escena = document.querySelector('a-scene');
 
             let modeloDesacoplado = false;
 
-            // 1. LÓGICA DE INTERFAZ Y SELECCIÓN DE MODELO
+            // Mostrar el panel de información al hacer clic
             btnJaguar.addEventListener("click", () => {
-                // Muestra el panel
-                infoPanel.style.display = "block";
-                
-                // Oculta todos los modelos primero (si tuvieras más)
-                // entidadFrailejon.setAttribute("visible", "false"); 
-                
-                // Muestra el Jaguar
-                entidadJaguar.setAttribute("visible", "true");
-                
-                // Actualiza la información educativa
-                tituloEspecie.innerText = "Jaguar (Panthera onca)";
-                descEspecie.innerText = "El felino más grande de América. Es un depredador clave que ayuda a mantener el equilibrio de los ecosistemas donde habita.";
+                infoPanel.style.display = infoPanel.style.display === "block" ? "none" : "block";
+                btnJaguar.innerText = infoPanel.style.display === "block" ? "Ocultar Información" : "Ver Información";
             });
 
-            // 2. LÓGICA DE PERSISTENCIA (Desacoplar el modelo del marcador)
+            // LÓGICA DE PERSISTENCIA
             marcador.addEventListener("targetFound", () => {
-                console.log("¡Marcador detectado!");
+                console.log("¡Imagen detectada!");
                 
-                // Solo desacoplamos la primera vez que se detecta
+                // Solo desacoplamos la primera vez
                 if (!modeloDesacoplado) {
-                    // Esperamos un momento breve para asegurar que el tracking es estable
+                    
+                    // Pequeña espera para asegurar que MindAR estabilizó la posición
                     setTimeout(() => {
-                        // Obtenemos la posición y rotación del contenedor en el mundo real
+                        // 1. Crear variables de Three.js para guardar la posición
                         const posicionMundo = new THREE.Vector3();
                         const rotacionMundo = new THREE.Quaternion();
                         const escalaMundo = new THREE.Vector3();
 
-                        // Extraemos esos datos del objeto 3D de Three.js subyacente
+                        // 2. Extraer las coordenadas actuales del contenedor en el mundo real
                         contenedorModelos.object3D.getWorldPosition(posicionMundo);
                         contenedorModelos.object3D.getWorldQuaternion(rotacionMundo);
                         contenedorModelos.object3D.getWorldScale(escalaMundo);
 
-                        // Removemos el contenedor del marcador
+                        // 3. Quitar el contenedor del marcador (para que no siga la imagen)
                         marcador.removeChild(contenedorModelos);
                         
-                        // Lo añadimos directamente a la escena principal
+                        // 4. Añadir el contenedor a la escena global (para que se quede fijo)
                         escena.appendChild(contenedorModelos);
 
-                        // Le aplicamos las coordenadas que capturamos para que se quede en ese lugar
+                        // 5. Aplicar las coordenadas guardadas al contenedor en su nuevo "hogar"
                         contenedorModelos.object3D.position.copy(posicionMundo);
                         contenedorModelos.object3D.quaternion.copy(rotacionMundo);
                         contenedorModelos.object3D.scale.copy(escalaMundo);
 
                         modeloDesacoplado = true;
-                        console.log("Modelo fijado en el espacio.");
-                    }, 500); // 500 milisegundos de espera
+                        console.log("Modelo fijado permanentemente en el espacio.");
+                    }, 800); // 800ms de gracia. Si ves que se fija chueco, aumenta este número a 1500.
                 }
-            });
-
-            marcador.addEventListener("targetLost", () => {
-                console.log("Marcador perdido de vista.");
-                // Gracias a la lógica anterior, el modelo no desaparecerá.
             });
         });
     </script>
