@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>EducAR: Fauna Nativa</title>
+    
+    <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.2/dist/mindar-image-aframe.prod.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/c-frame/aframe-extras@7.0.0/dist/aframe-extras.min.js"></script>
+
+    <style>
+        body { margin: 0; overflow: hidden; font-family: sans-serif; }
+        
+        #ui-container {
+            position: absolute;
+            bottom: 20px;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            z-index: 10;
+            pointer-events: none; /* No bloquear la pantalla */
+        }
+        
+        .btn-menu {
+            pointer-events: auto; /* Permitir clic */
+            padding: 12px 24px;
+            margin: 5px;
+            background: #FF9800; /* Color naranja */
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            transition: transform 0.1s;
+        }
+
+        .btn-menu:active { transform: scale(0.95); }
+        
+        #info-panel {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 20px;
+            border-radius: 12px;
+            width: 85%;
+            max-width: 400px;
+            text-align: center;
+            margin-bottom: 15px;
+            display: none; /* Oculto inicialmente */
+            pointer-events: auto;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        }
+
+        #info-panel h3 { margin: 0 0 10px 0; color: #333; }
+        #info-panel p { margin: 0; font-size: 14px; color: #555; line-height: 1.5; }
+    </style>
+</head>
+<body>
+
+    <div id="ui-container">
+        <div id="info-panel">
+            <h3 id="titulo-especie">Especie</h3>
+            <p id="desc-especie">Descripción...</p>
+        </div>
+        <div>
+            <button class="btn-menu" id="btn-jaguar">Ver Jaguar</button>
+        </div>
+    </div>
+
+    <a-scene mindar-image="imageTargetSrc: ./myrsc.mind;" 
+             color-space="sRGB" 
+             renderer="colorManagement: true, physicallyCorrectLights" 
+             vr-mode-ui="enabled: false" 
+             device-orientation-permission-ui="enabled: false">
+        
+        <a-assets>
+            <a-asset-item id="modelo-jaguar" src="./assets/jaguar.glb"></a-asset-item>
+        </a-assets>
+
+        <a-light type="ambient" color="#ffffff" intensity="1.2"></a-light>
+        <a-light type="directional" color="#ffffff" intensity="0.6" position="1 2 1"></a-light>
+
+        <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+
+        <a-entity mindar-image-target="targetIndex: 0" id="marcador">
+            
+            <a-entity id="contenedor-modelos" position="0 0 0">
+                
+                <a-gltf-model id="entidad-jaguar" 
+                              src="#modelo-jaguar" 
+                              position="0 0 0" 
+                              scale="0.5 0.5 0.5" 
+                              rotation="90 0 0" 
+                              visible="false" 
+                              animation-mixer>
+                </a-gltf-model>
+                
+                </a-entity>
+        </a-entity>
+    </a-scene>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const btnJaguar = document.querySelector("#btn-jaguar");
+            const entidadJaguar = document.querySelector("#entidad-jaguar");
+            const infoPanel = document.querySelector("#info-panel");
+            const tituloEspecie = document.querySelector("#titulo-especie");
+            const descEspecie = document.querySelector("#desc-especie");
+            
+            const marcador = document.querySelector('#marcador');
+            const contenedorModelos = document.querySelector('#contenedor-modelos');
+            const escena = document.querySelector('a-scene');
+
+            let modeloDesacoplado = false;
+
+            // 1. LÓGICA DE INTERFAZ Y SELECCIÓN DE MODELO
+            btnJaguar.addEventListener("click", () => {
+                // Muestra el panel
+                infoPanel.style.display = "block";
+                
+                // Oculta todos los modelos primero (si tuvieras más)
+                // entidadFrailejon.setAttribute("visible", "false"); 
+                
+                // Muestra el Jaguar
+                entidadJaguar.setAttribute("visible", "true");
+                
+                // Actualiza la información educativa
+                tituloEspecie.innerText = "Jaguar (Panthera onca)";
+                descEspecie.innerText = "El felino más grande de América. Es un depredador clave que ayuda a mantener el equilibrio de los ecosistemas donde habita.";
+            });
+
+            // 2. LÓGICA DE PERSISTENCIA (Desacoplar el modelo del marcador)
+            marcador.addEventListener("targetFound", () => {
+                console.log("¡Marcador detectado!");
+                
+                // Solo desacoplamos la primera vez que se detecta
+                if (!modeloDesacoplado) {
+                    // Esperamos un momento breve para asegurar que el tracking es estable
+                    setTimeout(() => {
+                        // Obtenemos la posición y rotación del contenedor en el mundo real
+                        const posicionMundo = new THREE.Vector3();
+                        const rotacionMundo = new THREE.Quaternion();
+                        const escalaMundo = new THREE.Vector3();
+
+                        // Extraemos esos datos del objeto 3D de Three.js subyacente
+                        contenedorModelos.object3D.getWorldPosition(posicionMundo);
+                        contenedorModelos.object3D.getWorldQuaternion(rotacionMundo);
+                        contenedorModelos.object3D.getWorldScale(escalaMundo);
+
+                        // Removemos el contenedor del marcador
+                        marcador.removeChild(contenedorModelos);
+                        
+                        // Lo añadimos directamente a la escena principal
+                        escena.appendChild(contenedorModelos);
+
+                        // Le aplicamos las coordenadas que capturamos para que se quede en ese lugar
+                        contenedorModelos.object3D.position.copy(posicionMundo);
+                        contenedorModelos.object3D.quaternion.copy(rotacionMundo);
+                        contenedorModelos.object3D.scale.copy(escalaMundo);
+
+                        modeloDesacoplado = true;
+                        console.log("Modelo fijado en el espacio.");
+                    }, 500); // 500 milisegundos de espera
+                }
+            });
+
+            marcador.addEventListener("targetLost", () => {
+                console.log("Marcador perdido de vista.");
+                // Gracias a la lógica anterior, el modelo no desaparecerá.
+            });
+        });
+    </script>
+</body>
+</html>
