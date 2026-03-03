@@ -3,12 +3,10 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>EducAR: Jaguar</title>
+    <title>EducAR: Fauna Nativa</title>
     
     <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
-    
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.2/dist/mindar-image-aframe.prod.js"></script>
-    
     <script src="https://cdn.jsdelivr.net/gh/c-frame/aframe-extras@7.0.0/dist/aframe-extras.min.js"></script>
 
     <style>
@@ -25,10 +23,10 @@
             pointer-events: none;
         }
         
-        #btn-jaguar {
+        #btn-info {
             pointer-events: auto;
             padding: 12px 24px;
-            background: #E65100; /* Naranja fuerte */
+            background: #2E7D32; 
             color: white;
             border: none;
             border-radius: 8px;
@@ -36,10 +34,8 @@
             font-weight: bold;
             cursor: pointer;
             box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-            transition: transform 0.1s;
+            display: none; /* Se mostrará cuando se escanee la imagen */
         }
-
-        #btn-jaguar:active { transform: scale(0.95); }
         
         #info-panel {
             background: rgba(255, 255, 255, 0.95);
@@ -49,7 +45,7 @@
             max-width: 400px;
             text-align: center;
             margin-bottom: 15px;
-            display: none; /* Oculto inicialmente */
+            display: none; 
             pointer-events: auto;
             box-shadow: 0 4px 10px rgba(0,0,0,0.2);
         }
@@ -62,10 +58,10 @@
 
     <div id="ui-container">
         <div id="info-panel">
-            <h3>Jaguar (Panthera onca)</h3>
-            <p>El felino más grande de América. Es un depredador clave que ayuda a mantener el equilibrio de los ecosistemas donde habita.</p>
+            <h3>Jaguar Sudamericano (Panthera onca)</h3>
+            <p>El felino más imponente de Sudamérica. Es vital para la conservación de nuestros ecosistemas, manteniendo el equilibrio de la selva y los llanos.</p>
         </div>
-        <button id="btn-jaguar">Ver Información</button>
+        <button id="btn-info">Ver Información</button>
     </div>
 
     <a-scene mindar-image="imageTargetSrc: ./myrsc.mind; autoStart: true;" 
@@ -81,74 +77,69 @@
         <a-light type="ambient" color="#ffffff" intensity="1"></a-light>
         <a-light type="directional" color="#ffffff" intensity="1.5" position="0 2 1"></a-light>
 
-        <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+        <a-camera position="0 0 0" look-controls="enabled: false">
+            <a-gltf-model id="jaguar-pantalla" 
+                          src="#modelo-jaguar" 
+                          position="0 -0.5 -3" 
+                          scale="0.5 0.5 0.5" 
+                          rotation="0 0 0" 
+                          visible="false" 
+                          animation-mixer>
+            </a-gltf-model>
+        </a-camera>
 
         <a-entity mindar-image-target="targetIndex: 0" id="marcador">
-            
-            <a-entity id="contenedor-modelos">
-                <a-gltf-model src="#modelo-jaguar" 
-                              position="0 0 0" 
-                              scale="0.5 0.5 0.5" 
-                              rotation="0 0 0" 
-                              animation-mixer>
-                </a-gltf-model>
-            </a-entity>
-
+            <a-gltf-model id="jaguar-marcador" 
+                          src="#modelo-jaguar" 
+                          position="0 0 0" 
+                          scale="0.5 0.5 0.5" 
+                          rotation="0 0 0" 
+                          animation-mixer>
+            </a-gltf-model>
         </a-entity>
     </a-scene>
 
-<script>
+    <script>
         document.addEventListener("DOMContentLoaded", () => {
-            const btnJaguar = document.querySelector("#btn-jaguar");
+            const btnInfo = document.querySelector("#btn-info");
             const infoPanel = document.querySelector("#info-panel");
             const marcador = document.querySelector('#marcador');
-            const contenedorModelos = document.querySelector('#contenedor-modelos');
-            const escena = document.querySelector('a-scene');
+            
+            const jaguarMarcador = document.querySelector('#jaguar-marcador');
+            const jaguarPantalla = document.querySelector('#jaguar-pantalla');
 
-            let modeloDesacoplado = false;
+            let yaSeEscaneoUnaVez = false;
 
             // Mostrar el panel de información al hacer clic
-            btnJaguar.addEventListener("click", () => {
+            btnInfo.addEventListener("click", () => {
                 infoPanel.style.display = infoPanel.style.display === "block" ? "none" : "block";
-                btnJaguar.innerText = infoPanel.style.display === "block" ? "Ocultar Información" : "Ver Información";
+                btnInfo.innerText = infoPanel.style.display === "block" ? "Ocultar Información" : "Ver Información";
             });
 
-            // LÓGICA DE PERSISTENCIA
+            // CUANDO DETECTA LA IMAGEN
             marcador.addEventListener("targetFound", () => {
-                console.log("¡Imagen detectada!");
+                console.log("Imagen en vista.");
+                yaSeEscaneoUnaVez = true;
                 
-                // Solo desacoplamos la primera vez
-                if (!modeloDesacoplado) {
+                // Mostramos el botón de información
+                btnInfo.style.display = "block";
+
+                // Mostramos el modelo sobre la imagen y ocultamos el de la pantalla
+                jaguarMarcador.setAttribute("visible", "true");
+                jaguarPantalla.setAttribute("visible", "false");
+            });
+
+            // CUANDO PIERDE LA IMAGEN DE VISTA
+            marcador.addEventListener("targetLost", () => {
+                console.log("Imagen perdida.");
+                
+                // Si ya escaneamos al menos una vez, activamos la persistencia en pantalla
+                if (yaSeEscaneoUnaVez) {
+                    // Ocultamos el modelo de la imagen (que ya no se ve de todas formas)
+                    jaguarMarcador.setAttribute("visible", "false");
                     
-                    // EL SECRETO: ESPERAR A QUE SE ESTABILICE EL TRACKING
-                    // 500 a 800 milisegundos suele ser perfecto.
-                    setTimeout(() => {
-                        console.log("Estabilizando coordenadas y desacoplando...");
-
-                        // 1. Crear variables de Three.js para guardar la posición
-                        const posicionMundo = new THREE.Vector3();
-                        const rotacionMundo = new THREE.Quaternion();
-                        const escalaMundo = new THREE.Vector3();
-
-                        // 2. Extraer las coordenadas actuales del contenedor en el mundo real
-                        contenedorModelos.object3D.getWorldPosition(posicionMundo);
-                        contenedorModelos.object3D.getWorldQuaternion(rotacionMundo);
-                        contenedorModelos.object3D.getWorldScale(escalaMundo);
-
-                        // 3. Quitar el contenedor del marcador
-                        marcador.removeChild(contenedorModelos);
-                        
-                        // 4. Añadir el contenedor a la escena global
-                        escena.appendChild(contenedorModelos);
-
-                        // 5. Aplicar las coordenadas guardadas al contenedor
-                        contenedorModelos.object3D.position.copy(posicionMundo);
-                        contenedorModelos.object3D.quaternion.copy(rotacionMundo);
-                        contenedorModelos.object3D.scale.copy(escalaMundo);
-
-                        modeloDesacoplado = true;
-                        console.log("Modelo fijado permanentemente en el espacio.");
-                    }, 800); // <-- ESTE ES EL DELAY CLAVE (800ms)
+                    // ENCENDEMOS el modelo anclado a la pantalla
+                    jaguarPantalla.setAttribute("visible", "true");
                 }
             });
         });
