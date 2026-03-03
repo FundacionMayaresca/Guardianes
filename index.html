@@ -97,7 +97,7 @@
         </a-entity>
     </a-scene>
 
-    <script>
+<script>
         document.addEventListener("DOMContentLoaded", () => {
             const btnJaguar = document.querySelector("#btn-jaguar");
             const infoPanel = document.querySelector("#info-panel");
@@ -120,8 +120,11 @@
                 // Solo desacoplamos la primera vez
                 if (!modeloDesacoplado) {
                     
-                    // Pequeña espera para asegurar que MindAR estabilizó la posición
+                    // EL SECRETO: ESPERAR A QUE SE ESTABILICE EL TRACKING
+                    // 500 a 800 milisegundos suele ser perfecto.
                     setTimeout(() => {
+                        console.log("Estabilizando coordenadas y desacoplando...");
+
                         // 1. Crear variables de Three.js para guardar la posición
                         const posicionMundo = new THREE.Vector3();
                         const rotacionMundo = new THREE.Quaternion();
@@ -132,20 +135,20 @@
                         contenedorModelos.object3D.getWorldQuaternion(rotacionMundo);
                         contenedorModelos.object3D.getWorldScale(escalaMundo);
 
-                        // 3. Quitar el contenedor del marcador (para que no siga la imagen)
+                        // 3. Quitar el contenedor del marcador
                         marcador.removeChild(contenedorModelos);
                         
-                        // 4. Añadir el contenedor a la escena global (para que se quede fijo)
+                        // 4. Añadir el contenedor a la escena global
                         escena.appendChild(contenedorModelos);
 
-                        // 5. Aplicar las coordenadas guardadas al contenedor en su nuevo "hogar"
+                        // 5. Aplicar las coordenadas guardadas al contenedor
                         contenedorModelos.object3D.position.copy(posicionMundo);
                         contenedorModelos.object3D.quaternion.copy(rotacionMundo);
                         contenedorModelos.object3D.scale.copy(escalaMundo);
 
                         modeloDesacoplado = true;
                         console.log("Modelo fijado permanentemente en el espacio.");
-                    }, 800); // 800ms de gracia. Si ves que se fija chueco, aumenta este número a 1500.
+                    }, 800); // <-- ESTE ES EL DELAY CLAVE (800ms)
                 }
             });
         });
