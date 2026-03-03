@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>EducAR: Fauna Nativa</title>
+    <title>EducAR: Fauna Sudamericana</title>
     
     <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.2/dist/mindar-image-aframe.prod.js"></script>
@@ -23,19 +23,29 @@
             pointer-events: none;
         }
         
-        #btn-info {
+        /* Contenedor de los botones de selección */
+        #menu-seleccion {
+            display: none; /* Oculto hasta que se escanea por primera vez */
+            gap: 10px;
+            margin-bottom: 15px;
             pointer-events: auto;
-            padding: 12px 24px;
+        }
+
+        .btn-animal {
+            padding: 10px 20px;
             background: #2E7D32; 
             color: white;
-            border: none;
+            border: 2px solid #ffffff;
             border-radius: 8px;
-            font-size: 16px;
+            font-size: 14px;
             font-weight: bold;
             cursor: pointer;
             box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-            display: none; /* Se mostrará cuando se escanee la imagen */
+            transition: transform 0.1s, background 0.2s;
         }
+
+        .btn-animal:active { transform: scale(0.95); }
+        .btn-animal.activo { background: #E65100; /* Naranja para el seleccionado */ }
         
         #info-panel {
             background: rgba(255, 255, 255, 0.95);
@@ -44,10 +54,9 @@
             width: 85%;
             max-width: 400px;
             text-align: center;
-            margin-bottom: 15px;
-            display: none; 
             pointer-events: auto;
             box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            display: none;
         }
 
         #info-panel h3 { margin: 0 0 10px 0; color: #333; }
@@ -57,11 +66,16 @@
 <body>
 
     <div id="ui-container">
-        <div id="info-panel">
-            <h3>Jaguar Sudamericano (Panthera onca)</h3>
-            <p>El felino más imponente de Sudamérica. Es vital para la conservación de nuestros ecosistemas, manteniendo el equilibrio de la selva y los llanos.</p>
+        
+        <div id="menu-seleccion">
+            <button class="btn-animal" data-animal="jaguar">Ver Jaguar</button>
+            <button class="btn-animal" data-animal="oso">Ver Oso</button>
         </div>
-        <button id="btn-info">Ver Información</button>
+
+        <div id="info-panel">
+            <h3 id="titulo-especie">Especie</h3>
+            <p id="desc-especie">Descripción</p>
+        </div>
     </div>
 
     <a-scene mindar-image="imageTargetSrc: ./myrsc.mind; autoStart: true;" 
@@ -72,75 +86,106 @@
         
         <a-assets>
             <a-asset-item id="modelo-jaguar" src="./jaguar.glb"></a-asset-item>
+            <a-asset-item id="modelo-oso" src="./oso.glb"></a-asset-item>
         </a-assets>
 
-        <a-light type="ambient" color="#ffffff" intensity="1"></a-light>
+        <a-light type="ambient" color="#ffffff" intensity="1.2"></a-light>
         <a-light type="directional" color="#ffffff" intensity="1.5" position="0 2 1"></a-light>
 
         <a-camera position="0 0 0" look-controls="enabled: false">
-            <a-gltf-model id="jaguar-pantalla" 
-                          src="#modelo-jaguar" 
-                          position="0 -0.5 -3" 
-                          scale="0.5 0.5 0.5" 
-                          rotation="0 0 0" 
-                          visible="false" 
-                          animation-mixer>
-            </a-gltf-model>
+            <a-gltf-model id="jaguar-pantalla" src="#modelo-jaguar" position="0 -0.5 -3" scale="0.5 0.5 0.5" visible="false" animation-mixer></a-gltf-model>
+            <a-gltf-model id="oso-pantalla" src="#modelo-oso" position="0 -0.5 -3" scale="0.5 0.5 0.5" visible="false" animation-mixer></a-gltf-model>
         </a-camera>
 
         <a-entity mindar-image-target="targetIndex: 0" id="marcador">
-            <a-gltf-model id="jaguar-marcador" 
-                          src="#modelo-jaguar" 
-                          position="0 0 0" 
-                          scale="0.5 0.5 0.5" 
-                          rotation="0 0 0" 
-                          animation-mixer>
-            </a-gltf-model>
+            <a-gltf-model id="jaguar-marcador" src="#modelo-jaguar" position="0 0 0" scale="0.5 0.5 0.5" visible="false" animation-mixer></a-gltf-model>
+            <a-gltf-model id="oso-marcador" src="#modelo-oso" position="0 0 0" scale="0.5 0.5 0.5" visible="false" animation-mixer></a-gltf-model>
         </a-entity>
     </a-scene>
 
     <script>
         document.addEventListener("DOMContentLoaded", () => {
-            const btnInfo = document.querySelector("#btn-info");
-            const infoPanel = document.querySelector("#info-panel");
             const marcador = document.querySelector('#marcador');
-            
+            const menuSeleccion = document.querySelector('#menu-seleccion');
+            const infoPanel = document.querySelector('#info-panel');
+            const tituloEspecie = document.querySelector('#titulo-especie');
+            const descEspecie = document.querySelector('#desc-especie');
+            const botones = document.querySelectorAll('.btn-animal');
+
+            // Modelos
             const jaguarMarcador = document.querySelector('#jaguar-marcador');
             const jaguarPantalla = document.querySelector('#jaguar-pantalla');
+            const osoMarcador = document.querySelector('#oso-marcador');
+            const osoPantalla = document.querySelector('#oso-pantalla');
 
-            let yaSeEscaneoUnaVez = false;
+            // Variables de estado
+            let marcadorVisible = false;
+            let animalActual = null; // Guardará 'jaguar' o 'oso'
 
-            // Mostrar el panel de información al hacer clic
-            btnInfo.addEventListener("click", () => {
-                infoPanel.style.display = infoPanel.style.display === "block" ? "none" : "block";
-                btnInfo.innerText = infoPanel.style.display === "block" ? "Ocultar Información" : "Ver Información";
-            });
+            // --- FUNCIÓN PRINCIPAL DE VISIBILIDAD ---
+            function actualizarEscena() {
+                if (!animalActual) return; // Si no hay selección, no hacer nada
 
-            // CUANDO DETECTA LA IMAGEN
-            marcador.addEventListener("targetFound", () => {
-                console.log("Imagen en vista.");
-                yaSeEscaneoUnaVez = true;
-                
-                // Mostramos el botón de información
-                btnInfo.style.display = "block";
-
-                // Mostramos el modelo sobre la imagen y ocultamos el de la pantalla
-                jaguarMarcador.setAttribute("visible", "true");
+                // 1. Ocultar todos los modelos por defecto para limpiar la escena
+                jaguarMarcador.setAttribute("visible", "false");
                 jaguarPantalla.setAttribute("visible", "false");
+                osoMarcador.setAttribute("visible", "false");
+                osoPantalla.setAttribute("visible", "false");
+
+                // 2. Encender solo el modelo correcto según el estado de la cámara
+                if (marcadorVisible) {
+                    // La cámara está viendo la imagen
+                    if (animalActual === 'jaguar') jaguarMarcador.setAttribute("visible", "true");
+                    if (animalActual === 'oso') osoMarcador.setAttribute("visible", "true");
+                } else {
+                    // La cámara dejó de ver la imagen (Persistencia)
+                    if (animalActual === 'jaguar') jaguarPantalla.setAttribute("visible", "true");
+                    if (animalActual === 'oso') osoPantalla.setAttribute("visible", "true");
+                }
+            }
+
+            // --- LÓGICA DE LOS BOTONES ---
+            botones.forEach(boton => {
+                boton.addEventListener('click', (e) => {
+                    const animalElegido = e.target.getAttribute('data-animal');
+                    animalActual = animalElegido;
+
+                    // Cambiar estilos de los botones
+                    botones.forEach(b => b.classList.remove('activo'));
+                    e.target.classList.add('activo');
+
+                    // Actualizar el texto educativo
+                    infoPanel.style.display = "block";
+                    if (animalActual === 'jaguar') {
+                        tituloEspecie.innerText = "Jaguar Sudamericano (Panthera onca)";
+                        descEspecie.innerText = "El felino más imponente de Sudamérica. Es vital para la conservación de nuestros ecosistemas, manteniendo el equilibrio de la selva y los llanos.";
+                    } else if (animalActual === 'oso') {
+                        tituloEspecie.innerText = "Oso de Anteojos (Tremarctos ornatus)";
+                        descEspecie.innerText = "El único oso de Sudamérica, endémico de los Andes. Es un dispersor de semillas fundamental para la preservación de los páramos y bosques de niebla.";
+                    }
+
+                    actualizarEscena();
+                });
             });
 
-            // CUANDO PIERDE LA IMAGEN DE VISTA
-            marcador.addEventListener("targetLost", () => {
-                console.log("Imagen perdida.");
+            // --- EVENTOS DEL MARCADOR DE REALIDAD AUMENTADA ---
+            marcador.addEventListener("targetFound", () => {
+                marcadorVisible = true;
                 
-                // Si ya escaneamos al menos una vez, activamos la persistencia en pantalla
-                if (yaSeEscaneoUnaVez) {
-                    // Ocultamos el modelo de la imagen (que ya no se ve de todas formas)
-                    jaguarMarcador.setAttribute("visible", "false");
-                    
-                    // ENCENDEMOS el modelo anclado a la pantalla
-                    jaguarPantalla.setAttribute("visible", "true");
+                // Mostrar el menú la primera vez que se escanea
+                menuSeleccion.style.display = "flex";
+                
+                // Si aún no ha seleccionado nada, seleccionamos el Jaguar por defecto
+                if (!animalActual) {
+                    document.querySelector('[data-animal="jaguar"]').click();
+                } else {
+                    actualizarEscena();
                 }
+            });
+
+            marcador.addEventListener("targetLost", () => {
+                marcadorVisible = false;
+                actualizarEscena(); // Al perder el marcador, la función encenderá los modelos de pantalla
             });
         });
     </script>
